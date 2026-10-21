@@ -1,8 +1,8 @@
-// Predictive Input Buffer - recreacion basada en el log de la consola (v4.7)
+// Predictive Input Buffer - recreacion basada en el log de la consola (v4.8)
 //
 // Idea: en lugar de aplicar cada input (press/release) al instante, se encola
 // y se aplica N "ticks" fisicos despues. N depende de la etapa activa y de si
-// el jugador esta en modo wave. F6 cicla: STAGE 1 -> 2 -> 3 -> 4 -> OFF.
+// el jugador esta en modo wave. F6 cicla: STAGE 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> OFF.
 //
 // 1 tick = 1/240 s  (4 ticks = 1 frame @ 60fps, igual que en el log original)
 
@@ -16,8 +16,8 @@ using namespace geode::prelude;
 
 namespace pib {
     struct Stage { int all; int wave; };
-    constexpr Stage STAGES[4] = { {2, 2}, {4, 4}, {8, 8}, {16, 8} };
-    constexpr int OFF = 4; // indice 4 = desactivado
+    constexpr Stage STAGES[6] = { {2, 2}, {4, 4}, {8, 8}, {16, 8}, {32, 16}, {64, 32} };
+    constexpr int OFF = 6; // indice 6 = desactivado (6 etapas: 0..5)
 
     inline int g_stage = 0; // arranca en STAGE 1
 
@@ -76,7 +76,7 @@ class $modify(PIBBaseGameLayer, GJBaseGameLayer) {
     }
 
     // Se llama una vez por paso de fisica: aqui descontamos ticks.
-   void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
         auto f = m_fields.self();
 
         for (auto it = f->queue.begin(); it != f->queue.end();) {
@@ -91,7 +91,7 @@ class $modify(PIBBaseGameLayer, GJBaseGameLayer) {
             }
         }
 
-   GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
     }
 };
 
@@ -107,7 +107,7 @@ class $modify(PIBPlayLayer, PlayLayer) {
 class $modify(PIBKeyboard, CCKeyboardDispatcher) {
     bool dispatchKeyboardMSG(enumKeyCodes key, bool down, bool repeat, double timestamp) {
         if (down && !repeat && key == KEY_F6) {
-            pib::g_stage = (pib::g_stage + 1) % 5;
+            pib::g_stage = (pib::g_stage + 1) % 7; // 6 etapas (0..5) + OFF (6) = 7
             pib::logStage();
             return true;
         }
@@ -116,7 +116,7 @@ class $modify(PIBKeyboard, CCKeyboardDispatcher) {
 };
 
 $on_mod(Loaded) {
-    log::info("[InputBuffer] v4.7 LOADED (Zero-Lag + Up Arrow Fix)");
+    log::info("[InputBuffer] v4.8 LOADED (Zero-Lag + Up Arrow Fix)");
     log::info("[InputBuffer] Starting Mode: STAGE 1 (2 All / 2 Wave)");
-    log::info("[InputBuffer] Press F6 in-level to cycle: 2/2 -> 4/4 -> 8/8 -> 16/8 -> OFF");
+    log::info("[InputBuffer] Press F6 in-level to cycle: 2/2 -> 4/4 -> 8/8 -> 16/8 -> 32/16 -> 64/32 -> OFF");
 }
